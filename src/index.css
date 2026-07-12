@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.cdnfonts.com/css/steiner');
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Noto+Nastaliq+Urdu:wght@400;700&family=Vazirmatn:wght@300;400;500;700&display=swap');
+/* ── Local fonts (no external CDN — works offline / in Iran) ── */
+@font-face {
+  font-family: 'Steiner';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/assets/fonts/steiner.woff') format('woff');
+}
+
+/* DM Sans, Vazirmatn, Noto Nastaliq loaded via @fontsource in main.tsx */
 
 /* ─────────────────────────────────────────
    DESIGN TOKENS
@@ -465,5 +473,28 @@ body[dir="ltr"] { font-family: var(--font-en); }
   letter-spacing: 0.3em;
   font-weight: 300;
   text-transform: uppercase;
+}
+
+/* ─────────────────────────────────────────
+   LOGO SHINE SWEEP
+───────────────────────────────────────── */
+@keyframes eqLogoShine {
+  0%   { transform: translateX(-120%); }
+  20%  { transform: translateX(-120%); }
+  55%  { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+}
+
+.eq-logo-shine {
+  animation: eqLogoShine 4s ease-in-out infinite;
+}
+
+.eq-logo-img {
+  transition: filter 0.4s ease, transform 0.6s ease;
+}
+
+.eq-logo-img:hover {
+  transform: scale(1.06);
+  filter: drop-shadow(0 0 16px rgba(191,163,106,0.6)) brightness(1.1);
 }
 

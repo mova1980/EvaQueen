@@ -1,27 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getAssetPath } from '../config/assets.config';
 
 const HERO_SLIDES = [
   {
-    src: 'https://images.pexels.com/photos/2681751/pexels-photo-2681751.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
+    src: getAssetPath('image', 'homepage/hero-1.jpg'),
     position: 'center 20%',
     ken: 'kenBurnsA',
   },
   {
-    src: 'https://images.pexels.com/photos/3622608/pexels-photo-3622608.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
+    src: getAssetPath('image', 'homepage/hero-2.jpg'),
     position: 'center top',
     ken: 'kenBurnsB',
   },
   {
-    src: 'https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop',
+    src: getAssetPath('image', 'homepage/hero-3.jpg'),
     position: 'center 15%',
     ken: 'kenBurnsC',
   },
 ];
 
-// Pexels video: "Elegant lady in ornate ballroom dress" — ID 30703853
-const FASHION_VIDEO_SRC = 'https://videos.pexels.com/video-files/30703853/13137299_1080_1920_60fps.mp4';
-const FASHION_VIDEO_POSTER = 'https://images.pexels.com/videos/30703853/pexels-photo-30703853.jpeg?auto=compress&cs=tinysrgb&w=400';
+const FASHION_VIDEO_SRC = getAssetPath('video', 'promo/fashion-show.mp4');
+const FASHION_VIDEO_POSTER = getAssetPath('video', 'promo/fashion-poster.jpg');
 
 const SLIDE_DURATION = 5500;
 

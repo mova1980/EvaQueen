@@ -1,3 +1,5 @@
+import { getAssetPath } from '../config/assets.config';
+
 export interface CartItem {
   id: number;
   name: string;
@@ -7,21 +9,21 @@ export interface CartItem {
 }
 
 export const productImages = [
-  'https://images.pexels.com/photos/2220316/pexels-photo-2220316.jpeg?auto=compress&cs=tinysrgb&w=800&h=1060&fit=crop',
-  'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=800&h=1060&fit=crop',
-  'https://images.pexels.com/photos/1375736/pexels-photo-1375736.jpeg?auto=compress&cs=tinysrgb&w=800&h=1060&fit=crop',
-  'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=800&h=1060&fit=crop',
-  'https://images.pexels.com/photos/3622608/pexels-photo-3622608.jpeg?auto=compress&cs=tinysrgb&w=800&h=1060&fit=crop',
+  getAssetPath('image', 'products/product-1.jpg'),
+  getAssetPath('image', 'products/product-2.jpg'),
+  getAssetPath('image', 'products/product-3.jpg'),
+  getAssetPath('image', 'products/product-4.jpg'),
+  getAssetPath('image', 'products/product-5.jpg'),
 ];
 
 export const collectionImages = [
-  'https://images.pexels.com/photos/2681751/pexels-photo-2681751.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop',
-  'https://images.pexels.com/photos/1462637/pexels-photo-1462637.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop',
-  'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop',
+  getAssetPath('image', 'collections/collection-1.jpg'),
+  getAssetPath('image', 'collections/collection-2.jpg'),
+  getAssetPath('image', 'collections/collection-3.jpg'),
 ];
 
 export const philosophyImage =
-  'https://images.pexels.com/photos/3622608/pexels-photo-3622608.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop';
+  getAssetPath('image', 'philosophy/philosophy.jpg');
 
 export const heroImage =
-  'https://images.pexels.com/photos/2681751/pexels-photo-2681751.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop';
+  getAssetPath('image', 'homepage/hero-1.jpg');
