@@ -10,7 +10,7 @@ interface LogoProps {
 const LOGO_SRC = getAssetPath('logo', 'evaqueen-logo.png');
 
 const dimensions = {
-  sm: { h: 48, fontSize: 18, tracking: 5, gap: 12 },
+  sm: { h: 88, fontSize: 32, tracking: 10, gap: 24 },
   md: { h: 112, fontSize: 40, tracking: 12, gap: 28 },
   lg: { h: 144, fontSize: 52, tracking: 14, gap: 32 },
   xl: { h: 180, fontSize: 64, tracking: 18, gap: 40 },
@@ -44,7 +44,7 @@ export default function EvaQueenLogo({
       : `url(#${uid}-text-shimmer)`;
 
   return (
-    <div className={`inline-flex items-center flex-shrink-0 ${className}`} style={{ gap: d.gap }}>
+    <div className={`inline-flex items-center ${className}`} style={{ gap: d.gap }}>
       {/* Logo image with shine sweep */}
       <div
         className="relative"
@@ -92,12 +92,11 @@ export default function EvaQueenLogo({
           {/* Wordmark — pure SVG for precise gradient */}
           <svg
             height={d.h}
-            width={d.fontSize * 9.5 + d.tracking * 8}
             viewBox={`0 0 ${d.fontSize * 9.5 + d.tracking * 8} ${d.h}`}
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-label="EvaQueen"
-            style={{ overflow: 'hidden', display: 'block', flexShrink: 0 }}
+            style={{ overflow: 'visible' }}
           >
             <defs>
               {/* Dark → gold → dark shimmer */}

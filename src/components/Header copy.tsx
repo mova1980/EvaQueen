@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language } from '../data/translations';
-import { getAssetPath } from '../config/assets.config';
-
-const LOGO_SRC = getAssetPath('logo', 'evaqueen-logo.png');
+import EvaQueenLogo from './EvaQueenLogo';
 
 interface HeaderProps {
   cartCount: number;
@@ -52,57 +50,22 @@ export default function Header({ cartCount, onCartOpen, onAuthOpen, onSearchOpen
         }`}
         role="banner"
       >
-        <div className="max-w-7xl mx-auto px-5 lg:px-8 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 flex items-center justify-between gap-6">
           {/* Logo */}
           <a
             href="#hero"
             aria-label="EvaQueen — صفحه اصلی"
-            className="flex-shrink-0 flex items-center gap-2.5"
-            style={{ textDecoration: 'none' }}
+            className="flex-shrink-0"
             onClick={(e) => { e.preventDefault(); scrollTo('#hero'); }}
           >
-            <img
-              src={LOGO_SRC}
-              alt="EvaQueen"
-              style={{
-                height: '38px',
-                width: '38px',
-                objectFit: 'contain',
-                filter: scrolled
-                  ? 'drop-shadow(0 0 4px rgba(191,163,106,0.25))'
-                  : 'brightness(0) invert(1) drop-shadow(0 0 6px rgba(247,244,239,0.3))',
-                transition: 'filter 0.4s ease',
-                flexShrink: 0,
-              }}
+            <EvaQueenLogo
+              size="md"
+              variant={scrolled ? 'dark' : 'light'}
             />
-            <div
-              style={{
-                width: '1px',
-                height: '22px',
-                background: scrolled
-                  ? 'linear-gradient(to bottom, transparent, rgba(191,163,106,0.5), transparent)'
-                  : 'linear-gradient(to bottom, transparent, rgba(247,244,239,0.35), transparent)',
-                flexShrink: 0,
-              }}
-            />
-            <span
-              className="font-en"
-              style={{
-                fontSize: '13px',
-                fontWeight: 300,
-                letterSpacing: '0.22em',
-                whiteSpace: 'nowrap',
-                color: scrolled ? '#3a3530' : 'rgba(247,244,239,0.92)',
-                transition: 'color 0.4s ease',
-                lineHeight: 1,
-              }}
-            >
-              EVAQUEEN
-            </span>
           </a>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex flex-1 justify-center items-center gap-6 min-w-0 overflow-hidden" aria-label="منوی اصلی">
+          <nav className="hidden lg:flex items-center gap-7" aria-label="منوی اصلی">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -118,7 +81,7 @@ export default function Header({ cartCount, onCartOpen, onAuthOpen, onSearchOpen
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-4 flex-shrink-0">
+          <div className="flex items-center gap-4">
             {/* Language */}
             <div className="relative">
               <button
