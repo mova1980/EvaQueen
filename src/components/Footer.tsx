@@ -2,7 +2,7 @@ import { Instagram, Twitter, Youtube, Send } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import EvaQueenLogo from './EvaQueenLogo';
 
-export default function Footer() {
+export default function Footer({ onAdminAccess }: { onAdminAccess?: () => void }) {
   const { t } = useLanguage();
 
   return (
@@ -131,6 +131,15 @@ export default function Footer() {
                 {l}
               </a>
             ))}
+            {/* Hidden admin access link */}
+            <button
+              onClick={() => onAdminAccess?.()}
+              className="font-en text-[10px] text-white/10 hover:text-gold/60 transition-colors duration-500"
+              aria-label="Admin Panel"
+              title=""
+            >
+              ·
+            </button>
           </div>
         </div>
       </div>

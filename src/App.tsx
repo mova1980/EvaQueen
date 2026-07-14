@@ -15,9 +15,11 @@ import SearchOverlay from './components/SearchOverlay';
 import ProductDetailModal, { ProductDetail } from './components/ProductDetailModal';
 import CollectionDetailModal, { CollectionDetail } from './components/CollectionDetailModal';
 import CheckoutModal from './components/CheckoutModal';
+import AdminPanel from './components/AdminPanel';
 
 function AppInner() {
   const { t } = useLanguage();
+  const [adminOpen, setAdminOpen] = useState(false);
   const [cartItems, setCartItems]   = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen]     = useState(false);
   const [authOpen, setAuthOpen]     = useState(false);
@@ -78,7 +80,7 @@ function AppInner() {
         <Testimonials />
         <Newsletter />
       </main>
-      <Footer />
+      <Footer onAdminAccess={() => setAdminOpen(true)} />
 
       <CartModal
         isOpen={cartOpen}
@@ -114,6 +116,7 @@ function AppInner() {
         items={cartItems}
         onSuccess={() => setCartItems([])}
       />
+      {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
     </div>
   );
 }
