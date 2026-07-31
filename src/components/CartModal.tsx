@@ -1,22 +1,22 @@
 import { X, ShoppingBag, Trash2, Minus, Plus } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { CartItem } from '../data/products';
+import { CartItem, parsePrice, formatToman } from '../data/products';
 
 interface CartModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: CartItem[];
-  onRemove: (id: number) => void;
-  onUpdateQty: (id: number, qty: number) => void;
+  onRemove: (id: string) => void;
+  onUpdateQty: (id: string, qty: number) => void;
   onCheckout: () => void;
 }
 
 export default function CartModal({ isOpen, onClose, items, onRemove, onUpdateQty, onCheckout }: CartModalProps) {
   const { t, dir } = useLanguage();
+  const isRtl = dir === 'rtl';
 
-  const totalLabel = items.length > 0
-    ? items.reduce((_, item) => item.price, '')
-    : '';
+  const totalAmount = items.reduce((sum, item) => sum + parsePrice(item.price) * item.quantity, 0);
+  const totalStr = formatToman(totalAmount);
 
   return (
     <>
@@ -26,12 +26,11 @@ export default function CartModal({ isOpen, onClose, items, onRemove, onUpdateQt
         aria-hidden="true"
       />
       <div
-        className={`fixed top-0 z-50 h-full w-full max-w-sm bg-ivory-100 shadow-luxury-lg flex flex-col transition-transform duration-500 ease-smooth ${dir === 'rtl' ? 'left-0' : 'right-0'} ${isOpen ? 'translate-x-0' : dir === 'rtl' ? '-translate-x-full' : 'translate-x-full'}`}
+        className={`fixed top-0 z-50 h-full w-full max-w-sm bg-ivory-100 shadow-luxury-lg flex flex-col transition-transform duration-500 ease-smooth ${isRtl ? 'left-0' : 'right-0'} ${isOpen ? 'translate-x-0' : isRtl ? '-translate-x-full' : 'translate-x-full'}`}
         role="dialog"
         aria-modal="true"
         aria-label={t.cart.title}
       >
-        {/* Gold accent */}
         <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-gold to-transparent" />
 
         <div className="flex items-center justify-between p-6 border-b border-stone-warm">
@@ -63,7 +62,6 @@ export default function CartModal({ isOpen, onClose, items, onRemove, onUpdateQt
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-soft-black truncate">{item.name}</p>
                     <p className="font-en text-xs text-gold mt-1">{item.price}</p>
-                    {/* Quantity controls */}
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => onUpdateQty(item.id, Math.max(1, item.quantity - 1))}
@@ -97,20 +95,19 @@ export default function CartModal({ isOpen, onClose, items, onRemove, onUpdateQt
 
         {items.length > 0 && (
           <div className="p-6 border-t border-stone-warm">
-            {/* Free shipping progress */}
             <div className="mb-5">
               <div className="flex justify-between text-xs text-soft-gray mb-2">
-                <span>{dir === 'rtl' ? 'ارسال رایگان بالای ۵ میلیون' : 'Free shipping over $100'}</span>
-                <span className="text-gold">✓</span>
+                <span>{isRtl ? 'ارسال رایگان بالای ۵ میلیون' : 'Free shipping over 5M Toman'}</span>
+                <span className="text-gold">{totalAmount >= 5000000 ? '✓' : ''}</span>
               </div>
               <div className="h-1 bg-stone-warm rounded-full overflow-hidden">
-                <div className="h-full bg-gold rounded-full" style={{ width: '75%', transition: 'width 0.5s ease' }} />
+                <div className="h-full bg-gold rounded-full" style={{ width: `${Math.min(100, (totalAmount / 5000000) * 100)}%`, transition: 'width 0.5s ease' }} />
               </div>
             </div>
 
             <div className="flex justify-between items-center mb-5">
               <span className="text-sm text-soft-gray">{t.cart.total}</span>
-              <span className="font-en font-bold text-soft-black">{totalLabel}</span>
+              <span className="font-en font-bold text-soft-black">{totalStr}</span>
             </div>
             <button
               onClick={() => { onClose(); onCheckout(); }}
@@ -122,7 +119,7 @@ export default function CartModal({ isOpen, onClose, items, onRemove, onUpdateQt
               onClick={onClose}
               className="w-full text-center text-xs text-soft-gray hover:text-gold mt-3 transition-colors"
             >
-              {dir === 'rtl' ? 'ادامه خرید' : 'Continue Shopping'}
+              {isRtl ? 'ادامه خرید' : 'Continue Shopping'}
             </button>
           </div>
         )}

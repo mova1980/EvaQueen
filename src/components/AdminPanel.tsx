@@ -3,16 +3,17 @@ import {
   LayoutDashboard, ShoppingBag, Image, FileText, Users, Settings,
   LogOut, Menu, X, Search, Bell, ChevronLeft, ChevronRight,
   TrendingUp, Clock, CheckCircle, Package, Plus, Trash2, Edit3,
-  Eye, Filter, Download, Upload, Star, AlertCircle, ArrowUp, ArrowDown,
+  Eye, Download, Upload, Star, AlertCircle,
 } from 'lucide-react';
 import {
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { supabase, adminLogin, adminLogout, isAdminLoggedIn, logAdminAction } from '../lib/admin';
+import { ProductsPage, CollectionsAdminPage } from './admin/AdminProducts';
 
 // ============ Types ============
-type AdminPage = 'dashboard' | 'orders' | 'galleries' | 'posts' | 'users' | 'settings';
+type AdminPage = 'dashboard' | 'products' | 'collections' | 'orders' | 'galleries' | 'posts' | 'users' | 'settings';
 interface Order { id: string; order_number: string; customer_name: string; customer_email: string; customer_phone: string; status: string; total_amount: string; items_json: any[]; notes: string; admin_notes: string; priority: string; created_at: string; updated_at: string; }
 interface Gallery { id: string; title: string; description: string; category: string; cover_image: string; created_at: string; }
 interface GalleryImage { id: string; gallery_id: string; title: string; description: string; image_url: string; sort_order: number; }
@@ -37,6 +38,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
 
   const navItems: { id: AdminPage; label: string; icon: typeof LayoutDashboard }[] = [
     { id: 'dashboard', label: 'داشبورد', icon: LayoutDashboard },
+    { id: 'products', label: 'محصولات', icon: Package },
+    { id: 'collections', label: 'مجموعه‌ها', icon: ShoppingBag },
     { id: 'orders', label: 'سفارشات', icon: ShoppingBag },
     { id: 'galleries', label: 'گالری‌ها', icon: Image },
     { id: 'posts', label: 'مطالب', icon: FileText },
@@ -123,6 +126,8 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-6" style={{ background: '#0f0f0f' }}>
           {page === 'dashboard' && <Dashboard />}
+          {page === 'products' && <ProductsPage />}
+          {page === 'collections' && <CollectionsAdminPage />}
           {page === 'orders' && <OrdersPage />}
           {page === 'galleries' && <GalleriesPage />}
           {page === 'posts' && <PostsPage />}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, CreditCard, MapPin, User, Check, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, CreditCard, MapPin, Check, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { CartItem } from '../data/products';
+import { CartItem, parsePrice, formatToman } from '../data/products';
+import { supabase, logAdminAction } from '../lib/admin';
 
 interface Props {
   isOpen: boolean;
@@ -14,7 +15,10 @@ type Step = 'info' | 'shipping' | 'payment' | 'success';
 
 export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Props) {
   const { t, dir } = useLanguage();
+  const isRtl = dir === 'rtl';
   const [step, setStep] = useState<Step>('info');
+  const [submitting, setSubmitting] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', email: '',
     address: '', city: '', postalCode: '',
@@ -23,14 +27,8 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
 
   if (!isOpen) return null;
 
-  const total = items.reduce((sum, item) => {
-    const num = item.price.replace(/[^0-9]/g, '');
-    return sum + (parseInt(num) || 0) * item.quantity;
-  }, 0);
-
-  const totalStr = dir === 'rtl'
-    ? total.toLocaleString('fa-IR') + ' تومان'
-    : '$' + (total / 50000).toFixed(0);
+  const totalAmount = items.reduce((sum, item) => sum + parsePrice(item.price) * item.quantity, 0);
+  const totalStr = formatToman(totalAmount);
 
   const field = (key: keyof typeof form, label: string, type = 'text', placeholder = '') => (
     <div key={key}>
@@ -46,15 +44,49 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
   );
 
   const steps: Step[] = ['info', 'shipping', 'payment'];
-  const stepLabels = dir === 'rtl'
-    ? ['اطلاعات', 'آدرس', 'پرداخت']
-    : ['Info', 'Shipping', 'Payment'];
+  const stepLabels = isRtl ? ['اطلاعات', 'آدرس', 'پرداخت'] : ['Info', 'Shipping', 'Payment'];
   const currentStepIdx = steps.indexOf(step);
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (step === 'info') setStep('shipping');
     else if (step === 'shipping') setStep('payment');
-    else if (step === 'payment') { setStep('success'); onSuccess(); }
+    else if (step === 'payment') {
+      // Save order to database
+      setSubmitting(true);
+      const ordNum = 'EQ-' + Date.now().toString().slice(-6);
+      const itemsJson = items.map((i) => ({ name: i.name, price: i.price, qty: i.quantity, image: i.image }));
+      const { error } = await supabase.from('orders').insert({
+        order_number: ordNum,
+        customer_name: `${form.firstName} ${form.lastName}`,
+        customer_email: form.email,
+        customer_phone: form.phone,
+        status: 'new',
+        total_amount: totalStr,
+        items_json: itemsJson,
+        notes: `آدرس: ${form.address}, ${form.city}, کد پستی: ${form.postalCode}`,
+        priority: 'normal',
+      });
+      await logAdminAction('create_order', 'order', `سفارش جدید ${ordNum} از ${form.firstName} ${form.lastName}`);
+
+      // Also create/update site_user
+      if (form.email) {
+        await supabase.from('site_users').upsert({
+          first_name: form.firstName,
+          last_name: form.lastName,
+          email: form.email,
+          phone: form.phone,
+          is_active: true,
+          order_count: 1,
+        }, { onConflict: 'email' });
+      }
+
+      setSubmitting(false);
+      if (!error) {
+        setOrderNumber(ordNum);
+        setStep('success');
+        onSuccess();
+      }
+    }
   };
 
   return (
@@ -73,10 +105,9 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
           </button>
 
           <div className="p-8">
-            {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-xl font-semibold text-soft-black">
-                {dir === 'rtl' ? 'تکمیل سفارش' : 'Checkout'}
+                {isRtl ? 'تکمیل سفارش' : 'Checkout'}
               </h2>
 
               {step !== 'success' && (
@@ -107,7 +138,7 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
             {step !== 'success' && (
               <div className="border border-stone-warm p-4 mb-6 bg-stone-warm/10">
                 <p className="text-xs text-soft-gray tracking-wider mb-3">
-                  {dir === 'rtl' ? 'خلاصه سفارش' : 'ORDER SUMMARY'}
+                  {isRtl ? 'خلاصه سفارش' : 'ORDER SUMMARY'}
                 </p>
                 <div className="space-y-2">
                   {items.map((item) => (
@@ -122,7 +153,7 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
                   ))}
                 </div>
                 <div className="flex justify-between items-center border-t border-stone-warm mt-3 pt-3">
-                  <span className="text-sm font-semibold text-soft-black">{dir === 'rtl' ? 'جمع کل' : 'Total'}</span>
+                  <span className="text-sm font-semibold text-soft-black">{isRtl ? 'جمع کل' : 'Total'}</span>
                   <span className="font-en font-bold" style={{ color: '#BFA36A' }}>{totalStr}</span>
                 </div>
               </div>
@@ -131,10 +162,10 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
             {/* Step content */}
             {step === 'info' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {field('firstName', dir === 'rtl' ? 'نام' : 'First Name')}
-                {field('lastName', dir === 'rtl' ? 'نام خانوادگی' : 'Last Name')}
-                {field('phone', dir === 'rtl' ? 'شماره تلفن' : 'Phone', 'tel')}
-                {field('email', dir === 'rtl' ? 'ایمیل' : 'Email', 'email')}
+                {field('firstName', isRtl ? 'نام' : 'First Name')}
+                {field('lastName', isRtl ? 'نام خانوادگی' : 'Last Name')}
+                {field('phone', isRtl ? 'شماره تلفن' : 'Phone', 'tel')}
+                {field('email', isRtl ? 'ایمیل' : 'Email', 'email')}
               </div>
             )}
 
@@ -142,17 +173,17 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-gold mb-2">
                   <MapPin size={16} />
-                  <span className="text-sm font-medium">{dir === 'rtl' ? 'آدرس تحویل' : 'Delivery Address'}</span>
+                  <span className="text-sm font-medium">{isRtl ? 'آدرس تحویل' : 'Delivery Address'}</span>
                 </div>
-                {field('address', dir === 'rtl' ? 'آدرس کامل' : 'Full Address')}
+                {field('address', isRtl ? 'آدرس کامل' : 'Full Address')}
                 <div className="grid grid-cols-2 gap-4">
-                  {field('city', dir === 'rtl' ? 'شهر' : 'City')}
-                  {field('postalCode', dir === 'rtl' ? 'کد پستی' : 'Postal Code')}
+                  {field('city', isRtl ? 'شهر' : 'City')}
+                  {field('postalCode', isRtl ? 'کد پستی' : 'Postal Code')}
                 </div>
                 <div className="flex gap-3 mt-2">
                   {[
-                    dir === 'rtl' ? 'پست پیشتاز (۳-۵ روز)' : 'Standard (3-5 days)',
-                    dir === 'rtl' ? 'پیک موتوری (۱ روز)' : 'Express (1 day)',
+                    isRtl ? 'پست پیشتاز (۳-۵ روز)' : 'Standard (3-5 days)',
+                    isRtl ? 'پیک موتوری (۱ روز)' : 'Express (1 day)',
                   ].map((opt, i) => (
                     <label key={i} className="flex-1 flex items-center gap-2 border border-stone-warm p-3 cursor-pointer hover:border-gold transition-colors">
                       <input type="radio" name="shipping" defaultChecked={i === 0} className="accent-gold" />
@@ -167,7 +198,7 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-gold mb-2">
                   <CreditCard size={16} />
-                  <span className="text-sm font-medium">{dir === 'rtl' ? 'اطلاعات پرداخت' : 'Payment Details'}</span>
+                  <span className="text-sm font-medium">{isRtl ? 'اطلاعات پرداخت' : 'Payment Details'}</span>
                 </div>
                 <div className="flex gap-3 mb-4">
                   {['کارت بانکی', 'زرین‌پال', 'PayPal'].map((m, i) => (
@@ -177,10 +208,10 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
                     </label>
                   ))}
                 </div>
-                {field('cardName', dir === 'rtl' ? 'نام روی کارت' : 'Name on Card')}
-                {field('cardNumber', dir === 'rtl' ? 'شماره کارت' : 'Card Number', 'text', '•••• •••• •••• ••••')}
+                {field('cardName', isRtl ? 'نام روی کارت' : 'Name on Card')}
+                {field('cardNumber', isRtl ? 'شماره کارت' : 'Card Number', 'text', '•••• •••• •••• ••••')}
                 <div className="grid grid-cols-2 gap-4">
-                  {field('cardExpiry', dir === 'rtl' ? 'تاریخ انقضا' : 'Expiry', 'text', 'MM/YY')}
+                  {field('cardExpiry', isRtl ? 'تاریخ انقضا' : 'Expiry', 'text', 'MM/YY')}
                   {field('cardCVV', 'CVV', 'text', '•••')}
                 </div>
               </div>
@@ -192,18 +223,18 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
                   <Check size={36} className="text-gold" />
                 </div>
                 <h3 className="text-xl font-semibold text-soft-black mb-3">
-                  {dir === 'rtl' ? 'سفارش ثبت شد!' : 'Order Placed!'}
+                  {isRtl ? 'سفارش ثبت شد!' : 'Order Placed!'}
                 </h3>
                 <p className="text-soft-gray text-sm mb-6 max-w-xs mx-auto">
-                  {dir === 'rtl'
+                  {isRtl
                     ? 'سفارش شما با موفقیت ثبت شد. اطلاعات پیگیری به ایمیل شما ارسال خواهد شد.'
                     : 'Your order has been placed. Tracking details will be sent to your email.'}
                 </p>
                 <div className="font-en text-xs text-soft-gray border border-stone-warm inline-block px-4 py-2">
-                  ORDER #EQ{Date.now().toString().slice(-6)}
+                  ORDER #{orderNumber}
                 </div>
                 <button onClick={onClose} className="btn-primary w-full mt-6 text-sm tracking-widest">
-                  <span>{dir === 'rtl' ? 'بازگشت به فروشگاه' : 'Continue Shopping'}</span>
+                  <span>{isRtl ? 'بازگشت به فروشگاه' : 'Continue Shopping'}</span>
                 </button>
               </div>
             )}
@@ -219,14 +250,16 @@ export default function CheckoutModal({ isOpen, onClose, items, onSuccess }: Pro
                   }}
                   className="flex items-center gap-2 text-sm text-soft-gray hover:text-gold transition-colors"
                 >
-                  {dir === 'rtl' ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                  {dir === 'rtl' ? 'قبلی' : 'Back'}
+                  {isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                  {isRtl ? 'قبلی' : 'Back'}
                 </button>
-                <button onClick={nextStep} className="btn-primary text-sm tracking-widest px-8">
+                <button onClick={nextStep} disabled={submitting} className="btn-primary text-sm tracking-widest px-8 disabled:opacity-50">
                   <span>
-                    {step === 'payment'
-                      ? (dir === 'rtl' ? 'پرداخت نهایی' : 'Pay Now')
-                      : (dir === 'rtl' ? 'مرحله بعد' : 'Next')}
+                    {submitting
+                      ? (isRtl ? 'در حال ثبت...' : 'Processing...')
+                      : step === 'payment'
+                        ? (isRtl ? 'ثبت سفارش' : 'Place Order')
+                        : (isRtl ? 'مرحله بعد' : 'Next')}
                   </span>
                 </button>
               </div>

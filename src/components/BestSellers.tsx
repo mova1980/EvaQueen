@@ -1,27 +1,29 @@
 import { useState } from 'react';
 import { ShoppingBag, Eye, Heart } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSiteData, Product } from '../contexts/SiteDataContext';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
-import { productImages, CartItem } from '../data/products';
-import type { ProductDetail } from './ProductDetailModal';
+import { CartItem } from '../data/products';
 
 interface BestSellersProps {
   onAddToCart: (item: CartItem) => void;
-  onProductClick: (p: ProductDetail) => void;
+  onProductClick: (p: Product) => void;
 }
 
 export default function BestSellers({ onAddToCart, onProductClick }: BestSellersProps) {
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
+  const { products, loading } = useSiteData();
   const [sectionRef, visible] = useIntersectionObserver(0.08);
-  const [liked, setLiked] = useState<Set<number>>(new Set());
+  const [liked, setLiked] = useState<Set<string>>(new Set());
 
-  const products = t.bestsellers.products.map((p, i) => ({
-    id: i + 1,
-    ...p,
-    image: productImages[i],
-  }));
+  const published = products.filter((p) => p.status === 'published');
 
-  const toggleLike = (id: number) => {
+  const isRtl = dir === 'rtl';
+  const getName = (p: Product) => (isRtl ? p.name : (p.name_en || p.name));
+  const getPrice = (p: Product) => (isRtl ? p.price : (p.price_en || p.price));
+  const getCategory = (p: Product) => (isRtl ? p.category : (p.category_en || p.category));
+
+  const toggleLike = (id: string) => {
     setLiked((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -41,45 +43,65 @@ export default function BestSellers({ onAddToCart, onProductClick }: BestSellers
           <p className={`text-body-lg text-soft-gray mt-3 fade-in-up delay-2 ${visible ? 'visible' : ''}`}>{t.bestsellers.subtitle}</p>
           <div className={`gold-divider fade-in-up delay-3 ${visible ? 'visible' : ''}`} />
         </div>
-        <div className="hidden md:grid grid-cols-3 gap-4" style={{ gridAutoRows: '280px' }}>
-          {products.map((product, i) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              gridClass={gridClasses[i]}
-              index={i}
-              visible={visible}
-              liked={liked.has(product.id)}
-              onLike={() => toggleLike(product.id)}
-              viewLabel={t.bestsellers.viewProduct}
-              onAddToCart={onAddToCart}
-              onView={() => onProductClick({ id: product.id, name: product.name, price: product.price, category: product.category, image: product.image })}
-            />
-          ))}
-        </div>
-        <div className="md:hidden grid grid-cols-2 gap-3">
-          {products.map((product, i) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              gridClass=""
-              index={i}
-              visible={visible}
-              liked={liked.has(product.id)}
-              onLike={() => toggleLike(product.id)}
-              viewLabel={t.bestsellers.viewProduct}
-              onAddToCart={onAddToCart}
-              onView={() => onProductClick({ id: product.id, name: product.name, price: product.price, category: product.category, image: product.image })}
-            />
-          ))}
-        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-stone-warm rounded-full animate-spin" style={{ borderTopColor: '#BFA36A' }} />
+          </div>
+        ) : published.length === 0 ? (
+          <p className="text-center text-soft-gray py-12">{isRtl ? 'محصولی یافت نشد' : 'No products found'}</p>
+        ) : (
+          <>
+            <div className="hidden md:grid grid-cols-3 gap-4" style={{ gridAutoRows: '280px' }}>
+              {published.map((product, i) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  name={getName(product)}
+                  price={getPrice(product)}
+                  category={getCategory(product)}
+                  gridClass={gridClasses[i % gridClasses.length]}
+                  index={i}
+                  visible={visible}
+                  liked={liked.has(product.id)}
+                  onLike={() => toggleLike(product.id)}
+                  viewLabel={t.bestsellers.viewProduct}
+                  onAddToCart={onAddToCart}
+                  onView={() => onProductClick(product)}
+                />
+              ))}
+            </div>
+            <div className="md:hidden grid grid-cols-2 gap-3">
+              {published.map((product, i) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  name={getName(product)}
+                  price={getPrice(product)}
+                  category={getCategory(product)}
+                  gridClass=""
+                  index={i}
+                  visible={visible}
+                  liked={liked.has(product.id)}
+                  onLike={() => toggleLike(product.id)}
+                  viewLabel={t.bestsellers.viewProduct}
+                  onAddToCart={onAddToCart}
+                  onView={() => onProductClick(product)}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );
 }
 
 interface ProductCardProps {
-  product: { id: number; name: string; price: string; category: string; image: string };
+  product: Product;
+  name: string;
+  price: string;
+  category: string;
   gridClass: string;
   index: number;
   visible: boolean;
@@ -90,7 +112,7 @@ interface ProductCardProps {
   onView: () => void;
 }
 
-function ProductCard({ product, gridClass, index, visible, liked, onLike, viewLabel, onAddToCart, onView }: ProductCardProps) {
+function ProductCard({ product, name, price, category, gridClass, index, visible, liked, onLike, viewLabel, onAddToCart, onView }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -107,12 +129,12 @@ function ProductCard({ product, gridClass, index, visible, liked, onLike, viewLa
       onClick={onView}
     >
       <div className="absolute inset-0">
-        <img src={product.image} alt={product.name} className="product-img w-full h-full object-cover object-top" loading="lazy" />
+        <img src={product.image} alt={name} className="product-img w-full h-full object-cover object-top" loading="lazy" />
       </div>
       <div className="product-overlay absolute inset-0" />
       <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(24,24,24,0.78) 0%, rgba(24,24,24,0.1) 45%, rgba(0,0,0,0.15) 100%)' }} />
       <div className="absolute top-4 start-4">
-        <span className="text-caption text-white/80 px-3 py-1 tracking-[0.15em]" style={{ background: 'rgba(24,24,24,0.35)', backdropFilter: 'blur(8px)' }}>{product.category}</span>
+        <span className="text-caption text-white/80 px-3 py-1 tracking-[0.15em]" style={{ background: 'rgba(24,24,24,0.35)', backdropFilter: 'blur(8px)' }}>{category}</span>
       </div>
       <div
         className="absolute top-4 end-4 flex flex-col gap-2"
@@ -131,10 +153,10 @@ function ProductCard({ product, gridClass, index, visible, liked, onLike, viewLa
           <Heart size={14} className="transition-colors duration-300" style={{ color: liked ? '#e4626c' : '#6F6A64', fill: liked ? '#e4626c' : 'none' }} />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onAddToCart({ id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1 }); }}
+          onClick={(e) => { e.stopPropagation(); onAddToCart({ id: product.id, name, price, image: product.image, quantity: 1 }); }}
           className="w-9 h-9 flex items-center justify-center transition-all duration-300 hover:scale-110"
           style={{ background: 'rgba(247,244,239,0.92)', backdropFilter: 'blur(8px)' }}
-          aria-label={`افزودن ${product.name}`}
+          aria-label={`افزودن ${name}`}
         >
           <ShoppingBag size={14} style={{ color: '#6F6A64' }} />
         </button>
@@ -142,7 +164,7 @@ function ProductCard({ product, gridClass, index, visible, liked, onLike, viewLa
           onClick={(e) => { e.stopPropagation(); onView(); }}
           className="w-9 h-9 flex items-center justify-center transition-all duration-300 hover:scale-110"
           style={{ background: 'rgba(247,244,239,0.92)', backdropFilter: 'blur(8px)' }}
-          aria-label={`مشاهده ${product.name}`}
+          aria-label={`مشاهده ${name}`}
         >
           <Eye size={14} style={{ color: '#6F6A64' }} />
         </button>
@@ -157,9 +179,9 @@ function ProductCard({ product, gridClass, index, visible, liked, onLike, viewLa
             transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
         />
-        <p className="text-sm font-semibold mb-1 transition-colors duration-400" style={{ color: hovered ? 'var(--accent-gold)' : 'rgba(247,244,239,0.97)' }}>{product.name}</p>
+        <p className="text-sm font-semibold mb-1 transition-colors duration-400" style={{ color: hovered ? 'var(--accent-gold)' : 'rgba(247,244,239,0.97)' }}>{name}</p>
         <div className="flex items-center justify-between">
-          <span className="font-en text-sm font-medium" style={{ color: 'var(--accent-gold)' }}>{product.price}</span>
+          <span className="font-en text-sm font-medium" style={{ color: 'var(--accent-gold)' }}>{price}</span>
           <span className="text-caption text-white/50 tracking-[0.15em]">{viewLabel}</span>
         </div>
       </div>

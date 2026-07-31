@@ -1,38 +1,36 @@
 import { useState } from 'react';
 import { X, ArrowLeft, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { productImages, CartItem } from '../data/products';
-
-export interface CollectionDetail {
-  index: number;
-  name: string;
-  desc: string;
-  image: string;
-}
+import { useSiteData, Collection, Product } from '../contexts/SiteDataContext';
+import { CartItem } from '../data/products';
 
 interface Props {
-  collection: CollectionDetail | null;
+  collection: Collection | null;
   onClose: () => void;
-  onProductClick: (productId: number) => void;
+  onProductClick: (p: Product) => void;
   onAddToCart: (item: CartItem) => void;
 }
 
-const COLLECTION_PRODUCTS: Record<number, number[]> = {
-  0: [0, 1, 2],
-  1: [2, 3, 4],
-  2: [0, 3, 4],
-};
-
 export default function CollectionDetailModal({ collection, onClose, onProductClick, onAddToCart }: Props) {
   const { t, dir } = useLanguage();
+  const { products } = useSiteData();
   const [activeThumb, setActiveThumb] = useState(0);
 
   if (!collection) return null;
 
-  const productIds = COLLECTION_PRODUCTS[collection.index] ?? [0, 1, 2];
-  const products = t.bestsellers.products;
+  const isRtl = dir === 'rtl';
+  const name = isRtl ? collection.name : (collection.name_en || collection.name);
+  const desc = isRtl ? collection.description : (collection.description_en || collection.description);
 
-  const galleryImgs = [collection.image, ...productIds.map(i => productImages[i])];
+  // Get products by sort_order indices stored in product_ids
+  const collectionProducts = (collection.product_ids || [])
+    .map((idx) => products.find((p) => p.sort_order === idx))
+    .filter((p): p is Product => p !== undefined && p.status === 'published');
+
+  const galleryImgs = [collection.image, ...collectionProducts.map((p) => p.image)];
+
+  const getName = (p: Product) => (isRtl ? p.name : (p.name_en || p.name));
+  const getPrice = (p: Product) => (isRtl ? p.price : (p.price_en || p.price));
 
   return (
     <>
@@ -46,7 +44,7 @@ export default function CollectionDetailModal({ collection, onClose, onProductCl
         className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
         role="dialog"
         aria-modal="true"
-        aria-label={collection.name}
+        aria-label={name}
       >
         <div
           className="bg-ivory-100 w-full max-w-5xl max-h-[92vh] overflow-y-auto relative shadow-luxury-lg"
@@ -69,7 +67,7 @@ export default function CollectionDetailModal({ collection, onClose, onProductCl
               <img
                 key={i}
                 src={src}
-                alt={`${collection.name} ${i + 1}`}
+                alt={`${name} ${i + 1}`}
                 className="absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-700"
                 style={{ opacity: i === activeThumb ? 1 : 0 }}
                 loading={i === 0 ? 'eager' : 'lazy'}
@@ -77,35 +75,32 @@ export default function CollectionDetailModal({ collection, onClose, onProductCl
             ))}
             <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(24,24,24,0.7) 0%, transparent 50%)' }} />
 
-            {/* Nav arrows */}
             <button
               onClick={() => setActiveThumb((i) => (i - 1 + galleryImgs.length) % galleryImgs.length)}
               className="absolute top-1/2 -translate-y-1/2 start-4 w-10 h-10 bg-ivory-100/75 backdrop-blur-sm flex items-center justify-center text-soft-gray hover:text-gold transition-colors"
               aria-label="قبلی"
             >
-              {dir === 'rtl' ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+              {isRtl ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
             </button>
             <button
               onClick={() => setActiveThumb((i) => (i + 1) % galleryImgs.length)}
               className="absolute top-1/2 -translate-y-1/2 end-4 w-10 h-10 bg-ivory-100/75 backdrop-blur-sm flex items-center justify-center text-soft-gray hover:text-gold transition-colors"
               aria-label="بعدی"
             >
-              {dir === 'rtl' ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
+              {isRtl ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
             </button>
 
-            {/* Title overlay */}
             <div className="absolute bottom-6 start-8">
               <div className="flex items-center gap-3 mb-2">
                 <div className="h-px w-8 bg-gold" />
                 <span className="font-en text-xs text-gold/80 tracking-[0.25em]">
-                  COLLECTION 0{collection.index + 1}
+                  COLLECTION
                 </span>
               </div>
-              <h2 className="font-en text-3xl font-light text-white tracking-[0.05em]">{collection.name}</h2>
-              <p className="text-white/65 text-sm mt-1">{collection.desc}</p>
+              <h2 className="font-en text-3xl font-light text-white tracking-[0.05em]">{name}</h2>
+              <p className="text-white/65 text-sm mt-1">{desc}</p>
             </div>
 
-            {/* Dots */}
             <div className="absolute bottom-4 end-8 flex gap-1.5">
               {galleryImgs.map((_, i) => (
                 <button
@@ -142,52 +137,52 @@ export default function CollectionDetailModal({ collection, onClose, onProductCl
           <div className="p-6 md:p-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-soft-black">
-                {dir === 'rtl' ? 'محصولات این مجموعه' : 'Products in this Collection'}
+                {isRtl ? 'محصولات این مجموعه' : 'Products in this Collection'}
               </h3>
-              <span className="text-xs text-soft-gray">{productIds.length} {dir === 'rtl' ? 'محصول' : 'items'}</span>
+              <span className="text-xs text-soft-gray">{collectionProducts.length} {isRtl ? 'محصول' : 'items'}</span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {productIds.map((pid, i) => {
-                const p = products[pid];
-                if (!p) return null;
-                return (
+            {collectionProducts.length === 0 ? (
+              <p className="text-center text-soft-gray py-8">{isRtl ? 'محصولی در این مجموعه یافت نشد' : 'No products in this collection'}</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {collectionProducts.map((p, i) => (
                   <div
-                    key={i}
+                    key={p.id}
                     className="group cursor-pointer"
                     style={{ animation: `fadeIn 0.4s ease ${i * 0.1}s both` }}
                   >
                     <div
                       className="relative overflow-hidden aspect-[3/4] mb-3"
-                      onClick={() => onProductClick(pid + 1)}
+                      onClick={() => { onClose(); onProductClick(p); }}
                     >
                       <img
-                        src={productImages[pid]}
-                        alt={p.name}
+                        src={p.image}
+                        alt={getName(p)}
                         className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
                         loading="lazy"
                       />
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center" style={{ background: 'rgba(24,24,24,0.25)' }}>
                         <span className="text-xs text-white tracking-[0.2em] border border-white/60 px-4 py-2">
-                          {dir === 'rtl' ? 'مشاهده' : 'VIEW'}
+                          {isRtl ? 'مشاهده' : 'VIEW'}
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm font-medium text-soft-black leading-tight">{p.name}</p>
+                    <p className="text-sm font-medium text-soft-black leading-tight">{getName(p)}</p>
                     <div className="flex items-center justify-between mt-1">
-                      <span className="font-en text-sm" style={{ color: '#BFA36A' }}>{p.price}</span>
+                      <span className="font-en text-sm" style={{ color: '#BFA36A' }}>{getPrice(p)}</span>
                       <button
-                        onClick={() => onAddToCart({ id: pid + 1, name: p.name, price: p.price, image: productImages[pid], quantity: 1 })}
+                        onClick={() => onAddToCart({ id: p.id, name: getName(p), price: getPrice(p), image: p.image, quantity: 1 })}
                         className="w-8 h-8 flex items-center justify-center border border-stone-warm hover:border-gold hover:text-gold text-soft-gray transition-all duration-200"
-                        aria-label={`افزودن ${p.name} به سبد`}
+                        aria-label={`افزودن ${getName(p)} به سبد`}
                       >
                         <ShoppingBag size={13} />
                       </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

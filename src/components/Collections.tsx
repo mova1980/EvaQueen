@@ -1,34 +1,39 @@
 import { useRef, useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSiteData, Collection } from '../contexts/SiteDataContext';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
-import { collectionImages } from '../data/products';
-import type { CollectionDetail } from './CollectionDetailModal';
 
 interface CollectionsProps {
-  onCollectionClick: (c: CollectionDetail) => void;
+  onCollectionClick: (c: Collection) => void;
 }
 
 export default function Collections({ onCollectionClick }: CollectionsProps) {
   const { t, dir } = useLanguage();
+  const { collections, loading } = useSiteData();
   const [titleRef, titleVisible] = useIntersectionObserver(0.15);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollPos, setScrollPos] = useState(0);
   const [maxScroll, setMaxScroll] = useState(1);
 
+  const isRtl = dir === 'rtl';
+  const published = collections.filter((c) => c.status === 'published');
+  const getName = (c: Collection) => (isRtl ? c.name : (c.name_en || c.name));
+  const getDesc = (c: Collection) => (isRtl ? c.description : (c.description_en || c.description));
+
   useEffect(() => {
     if (scrollRef.current) {
       setMaxScroll(scrollRef.current.scrollWidth - scrollRef.current.clientWidth);
     }
-  }, []);
+  }, [published.length]);
 
   const scroll = (direction: 'next' | 'prev') => {
     if (!scrollRef.current) return;
     const amount = scrollRef.current.offsetWidth * 0.88;
     scrollRef.current.scrollBy({
       left: direction === 'next'
-        ? (dir === 'rtl' ? -amount : amount)
-        : (dir === 'rtl' ? amount : -amount),
+        ? (isRtl ? -amount : amount)
+        : (isRtl ? amount : -amount),
       behavior: 'smooth',
     });
   };
@@ -46,32 +51,41 @@ export default function Collections({ onCollectionClick }: CollectionsProps) {
           </div>
           <div className={`hidden md:flex gap-3 flex-shrink-0 fade-in-up delay-3 ${titleVisible ? 'visible' : ''}`}>
             <button onClick={() => scroll('prev')} className="w-11 h-11 border border-stone-warm rounded-full flex items-center justify-center text-soft-gray hover:border-gold hover:text-gold hover:scale-105 transition-all duration-300" aria-label="قبلی">
-              {dir === 'rtl' ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+              {isRtl ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
             </button>
             <button onClick={() => scroll('next')} className="w-11 h-11 border border-stone-warm rounded-full flex items-center justify-center text-soft-gray hover:border-gold hover:text-gold hover:scale-105 transition-all duration-300" aria-label="بعدی">
-              {dir === 'rtl' ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
+              {isRtl ? <ArrowLeft size={18} /> : <ArrowRight size={18} />}
             </button>
           </div>
         </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="horizontal-scroll flex gap-5 pb-6"
-        style={{ paddingLeft: 'max(24px, calc((100vw - 1280px) / 2 + 24px))', paddingRight: '24px' }}
-        onScroll={(e) => setScrollPos((e.target as HTMLElement).scrollLeft)}
-      >
-        {t.collections.items.map((item, i) => (
-          <CollectionCard
-            key={i}
-            item={item}
-            image={collectionImages[i]}
-            index={i}
-            onClick={() => onCollectionClick({ index: i, name: item.name, desc: item.desc, image: collectionImages[i] })}
-          />
-        ))}
-        <div className="flex-shrink-0 w-4" />
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-2 border-stone-warm rounded-full animate-spin" style={{ borderTopColor: '#BFA36A' }} />
+        </div>
+      ) : published.length === 0 ? (
+        <p className="text-center text-soft-gray py-12">{isRtl ? 'مجموعه‌ای یافت نشد' : 'No collections found'}</p>
+      ) : (
+        <div
+          ref={scrollRef}
+          className="horizontal-scroll flex gap-5 pb-6"
+          style={{ paddingLeft: 'max(24px, calc((100vw - 1280px) / 2 + 24px))', paddingRight: '24px' }}
+          onScroll={(e) => setScrollPos((e.target as HTMLElement).scrollLeft)}
+        >
+          {published.map((item, i) => (
+            <CollectionCard
+              key={item.id}
+              item={item}
+              name={getName(item)}
+              desc={getDesc(item)}
+              index={i}
+              onClick={() => onCollectionClick(item)}
+            />
+          ))}
+          <div className="flex-shrink-0 w-4" />
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-6 mt-8">
         <div className="flex items-center gap-4">
@@ -79,7 +93,7 @@ export default function Collections({ onCollectionClick }: CollectionsProps) {
           <div className="flex-1 h-px bg-stone-warm rounded-full overflow-hidden">
             <div className="h-full bg-gold transition-all duration-300 rounded-full" style={{ width: `${Math.max(8, progressPct)}%` }} />
           </div>
-          <span className="font-en text-xs text-soft-gray/60">0{t.collections.items.length}</span>
+          <span className="font-en text-xs text-soft-gray/60">0{published.length || 1}</span>
         </div>
       </div>
     </section>
@@ -87,10 +101,11 @@ export default function Collections({ onCollectionClick }: CollectionsProps) {
 }
 
 function CollectionCard({
-  item, image, index, onClick,
+  item, name, desc, index, onClick,
 }: {
-  item: { name: string; desc: string };
-  image: string;
+  item: Collection;
+  name: string;
+  desc: string;
   index: number;
   onClick: () => void;
 }) {
@@ -114,10 +129,10 @@ function CollectionCard({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      aria-label={`مشاهده مجموعه ${item.name}`}
+      aria-label={`مشاهده مجموعه ${name}`}
     >
       <div className="absolute inset-0 overflow-hidden">
-        <img src={image} alt={item.name} className="w-full h-full object-cover object-top transition-transform duration-1000" style={{ transform: hovered ? 'scale(1.07)' : 'scale(1)' }} loading="lazy" />
+        <img src={item.image} alt={name} className="w-full h-full object-cover object-top transition-transform duration-1000" style={{ transform: hovered ? 'scale(1.07)' : 'scale(1)' }} loading="lazy" />
       </div>
       <div className="absolute inset-0 transition-opacity duration-500" style={{ background: 'linear-gradient(to top, rgba(24,24,24,0.85) 0%, rgba(24,24,24,0.15) 45%, transparent 100%)', opacity: hovered ? 1 : 0.85 }} />
       <div className="absolute inset-0 transition-opacity duration-500" style={{ background: 'linear-gradient(135deg, rgba(191,163,106,0.08) 0%, transparent 70%)', opacity: hovered ? 1 : 0 }} />
@@ -125,8 +140,8 @@ function CollectionCard({
       <div className="absolute top-5 right-5 w-8 h-8 border-t border-r transition-all duration-500" style={{ borderColor: hovered ? 'rgba(191,163,106,0.6)' : 'rgba(191,163,106,0)' }} />
       <div className="absolute bottom-0 left-0 right-0 p-8">
         <span className="font-en text-xs text-gold/75 tracking-[0.25em] block mb-2">0{index + 1}</span>
-        <h3 className="font-en text-xl font-light text-white mb-2 tracking-[0.06em] transition-colors duration-300" style={{ color: hovered ? '#F0D898' : 'rgba(247,244,239,0.97)' }}>{item.name}</h3>
-        <p className="text-xs text-white/55 mb-5 leading-relaxed">{item.desc}</p>
+        <h3 className="font-en text-xl font-light text-white mb-2 tracking-[0.06em] transition-colors duration-300" style={{ color: hovered ? '#F0D898' : 'rgba(247,244,239,0.97)' }}>{name}</h3>
+        <p className="text-xs text-white/55 mb-5 leading-relaxed">{desc}</p>
         <div className="flex items-center gap-3" style={{ opacity: hovered ? 1 : 0, transform: hovered ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 0.4s ease 0.1s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s' }}>
           <div className="h-px w-8 bg-gold" />
           <span className="text-caption text-gold tracking-[0.2em]">EXPLORE</span>

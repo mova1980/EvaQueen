@@ -1,7 +1,7 @@
 import { getAssetPath } from '../config/assets.config';
 
 export interface CartItem {
-  id: number;
+  id: string;
   name: string;
   price: string;
   image: string;
@@ -27,3 +27,14 @@ export const philosophyImage =
 
 export const heroImage =
   getAssetPath('image', 'homepage/hero-1.jpg');
+
+// Parse price string to numeric value in Toman
+export function parsePrice(price: string): number {
+  const num = parseInt(price.replace(/[^0-9]/g, ''), 10);
+  return isNaN(num) ? 0 : num;
+}
+
+// Format number as Toman price string
+export function formatToman(amount: number): string {
+  return amount.toLocaleString('fa-IR') + ' تومان';
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
-import { CartItem, productImages } from './data/products';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { SiteDataProvider, Product, Collection } from './contexts/SiteDataContext';
+import { CartItem } from './data/products';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Collections from './components/Collections';
@@ -12,22 +13,21 @@ import Footer from './components/Footer';
 import CartModal from './components/CartModal';
 import AuthModal from './components/AuthModal';
 import SearchOverlay from './components/SearchOverlay';
-import ProductDetailModal, { ProductDetail } from './components/ProductDetailModal';
-import CollectionDetailModal, { CollectionDetail } from './components/CollectionDetailModal';
+import ProductDetailModal from './components/ProductDetailModal';
+import CollectionDetailModal from './components/CollectionDetailModal';
 import CheckoutModal from './components/CheckoutModal';
 import AdminPanel from './components/AdminPanel';
 
 function AppInner() {
-  const { t } = useLanguage();
   const [adminOpen, setAdminOpen] = useState(false);
-  const [cartItems, setCartItems]   = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen]     = useState(false);
-  const [authOpen, setAuthOpen]     = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
-  const [selectedCollection, setSelectedCollection] = useState<CollectionDetail | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
 
   const addToCart = (item: CartItem) => {
     setCartItems((prev) => {
@@ -40,25 +40,12 @@ function AppInner() {
     setCartOpen(true);
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string) => {
     setCartItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const updateQty = (id: number, qty: number) => {
+  const updateQty = (id: string, qty: number) => {
     setCartItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity: qty } : i));
-  };
-
-  const openProductById = (productId: number) => {
-    const idx = productId - 1;
-    const p = t.bestsellers.products[idx];
-    setSelectedCollection(null);
-    setSelectedProduct({
-      id: productId,
-      name: p?.name ?? '',
-      price: p?.price ?? '',
-      category: p?.category ?? '',
-      image: productImages[idx] ?? productImages[0],
-    });
   };
 
   return (
@@ -107,7 +94,7 @@ function AppInner() {
       <CollectionDetailModal
         collection={selectedCollection}
         onClose={() => setSelectedCollection(null)}
-        onProductClick={openProductById}
+        onProductClick={(p) => { setSelectedCollection(null); setSelectedProduct(p); }}
         onAddToCart={addToCart}
       />
       <CheckoutModal
@@ -116,7 +103,11 @@ function AppInner() {
         items={cartItems}
         onSuccess={() => setCartItems([])}
       />
-      {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
+      {adminOpen && (
+        <SiteDataProvider>
+          <AdminPanel onClose={() => setAdminOpen(false)} />
+        </SiteDataProvider>
+      )}
     </div>
   );
 }
@@ -124,7 +115,9 @@ function AppInner() {
 export default function App() {
   return (
     <LanguageProvider>
-      <AppInner />
+      <SiteDataProvider>
+        <AppInner />
+      </SiteDataProvider>
     </LanguageProvider>
   );
 }
