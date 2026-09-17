@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase, logAdminAction } from '../../lib/admin';
 import { useSiteData, Product, Collection } from '../../contexts/SiteDataContext';
+import ImageUpload, { MultiImageUpload } from './ImageUpload';
 
 // ============ Products Page ============
 export function ProductsPage() {
@@ -151,9 +152,8 @@ function ProductEditor({ product, onClose, onSave }: { product: Product | null; 
               <div><label className="text-xs text-gray-400 block mb-1.5">دسته (فارسی)</label><input type="text" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2.5 text-sm rounded border" style={inputStyle} /></div>
               <div><label className="text-xs text-gray-400 block mb-1.5">دسته (انگلیسی)</label><input type="text" value={categoryEn} onChange={(e) => setCategoryEn(e.target.value)} className="w-full px-4 py-2.5 text-sm rounded border" style={inputStyle} /></div>
             </div>
-            <div><label className="text-xs text-gray-400 block mb-1.5">تصویر اصلی</label><input type="text" value={image} onChange={(e) => setImage(e.target.value)} placeholder="/assets/images/products/product-1.jpg" className="w-full px-4 py-2.5 text-sm rounded border font-en" style={inputStyle} /></div>
-            {image && <img src={image} alt="preview" className="w-32 h-40 object-cover object-top rounded border border-white/10" />}
-            <div><label className="text-xs text-gray-400 block mb-1.5">تصاویر گالری (هر خط یک آدرس)</label><textarea value={imagesStr} onChange={(e) => setImagesStr(e.target.value)} rows={3} className="w-full px-4 py-2.5 text-sm rounded border resize-none font-en" style={inputStyle} placeholder="/assets/images/products/product-1.jpg" /></div>
+            <ImageUpload label="تصویر اصلی" value={image} onChange={setImage} aspect="aspect-[3/4]" />
+            <MultiImageUpload label="تصاویر گالری" value={imagesStr.split('\n').map(s => s.trim()).filter(Boolean)} onChange={(urls) => setImagesStr(urls.join('\n'))} />
             <div><label className="text-xs text-gray-400 block mb-1.5">توضیحات (فارسی)</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={inputStyle} /></div>
             <div><label className="text-xs text-gray-400 block mb-1.5">توضیحات (انگلیسی)</label><textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={3} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={inputStyle} /></div>
             <div className="grid grid-cols-2 gap-4">
@@ -389,9 +389,8 @@ function CollectionEditor({ collection, products, onClose, onSave }: { collectio
             </div>
             <div><label className="text-xs text-gray-400 block mb-1.5">توضیحات (فارسی)</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={inputStyle} /></div>
             <div><label className="text-xs text-gray-400 block mb-1.5">توضیحات (انگلیسی)</label><textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={2} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={inputStyle} /></div>
-            <div><label className="text-xs text-gray-400 block mb-1.5">تصویر اصلی</label><input type="text" value={image} onChange={(e) => setImage(e.target.value)} placeholder="/assets/images/collections/collection-1.jpg" className="w-full px-4 py-2.5 text-sm rounded border font-en" style={inputStyle} /></div>
-            {image && <img src={image} alt="preview" className="w-32 h-20 object-cover object-top rounded border border-white/10" />}
-            <div><label className="text-xs text-gray-400 block mb-1.5">تصاویر گالری (هر خط یک آدرس)</label><textarea value={imagesStr} onChange={(e) => setImagesStr(e.target.value)} rows={3} className="w-full px-4 py-2.5 text-sm rounded border resize-none font-en" style={inputStyle} /></div>
+            <ImageUpload label="تصویر اصلی" value={image} onChange={setImage} aspect="aspect-video" />
+            <MultiImageUpload label="تصاویر گالری" value={imagesStr.split('\n').map(s => s.trim()).filter(Boolean)} onChange={(urls) => setImagesStr(urls.join('\n'))} />
             <div>
               <label className="text-xs text-gray-400 block mb-2">محصولات این مجموعه</label>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-white/10 rounded" style={{ background: '#1a1a1a' }}>
