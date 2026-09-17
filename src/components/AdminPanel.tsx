@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ShoppingBag, Image, FileText, Users, Settings,
   LogOut, Menu, X, Search, Bell, ChevronLeft, ChevronRight,
   TrendingUp, Clock, CheckCircle, Package, Plus, Trash2, Edit3,
-  Eye, Download, Upload, Star, AlertCircle,
+  Eye, Download, Star, AlertCircle,
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { supabase, adminLogin, adminLogout, isAdminLoggedIn, logAdminAction } from '../lib/admin';
 import { ProductsPage, CollectionsAdminPage } from './admin/AdminProducts';
+import ImageUpload from './admin/ImageUpload';
 
 // ============ Types ============
 type AdminPage = 'dashboard' | 'products' | 'collections' | 'orders' | 'galleries' | 'posts' | 'users' | 'settings';
@@ -109,10 +110,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="text-gray-400 hover:text-white transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white">3</span>
-            </button>
+            <NotificationsBell />
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
@@ -606,8 +604,8 @@ function GalleriesPage() {
     fetchGalleries();
   };
 
-  const createGallery = async (title: string, description: string, category: string) => {
-    await supabase.from('galleries').insert({ title, description, category, cover_image: '/assets/images/collections/collection-1.jpg' });
+  const createGallery = async (title: string, description: string, category: string, coverImage: string) => {
+    await supabase.from('galleries').insert({ title, description, category, cover_image: coverImage || '/assets/images/collections/collection-1.jpg' });
     await logAdminAction('create_gallery', 'gallery', `ایجاد گالری ${title}`);
     setShowCreate(false);
     fetchGalleries();
@@ -692,10 +690,8 @@ function GalleryDetailModal({ gallery, onClose }: { gallery: Gallery; onClose: (
           </div>
           <div className="p-6">
             {/* Upload area */}
-            <div className="mb-4 p-6 border-2 border-dashed border-white/10 rounded-lg text-center">
-              <Upload size={24} className="mx-auto text-gray-500 mb-2" />
-              <p className="text-sm text-gray-400 mb-2">تصاویر را اینجا بکشید یا کلیک کنید</p>
-              <input type="text" placeholder="آدرس تصویر..." className="w-full max-w-sm px-3 py-2 text-sm rounded border mb-2" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} onKeyDown={(e) => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value; if (v) { addImage(v, 'تصویر جدید'); (e.target as HTMLInputElement).value = ''; } } }} />
+            <div className="mb-4">
+              <ImageUpload label="افزودن تصویر" value="" onChange={(url) => { if (url) addImage(url, 'تصویر جدید'); }} aspect="aspect-square" />
             </div>
             {loading ? <LoadingSpinner /> : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -716,10 +712,11 @@ function GalleryDetailModal({ gallery, onClose }: { gallery: Gallery; onClose: (
   );
 }
 
-function CreateGalleryModal({ onClose, onCreate }: { onClose: () => void; onCreate: (t: string, d: string, c: string) => void }) {
+function CreateGalleryModal({ onClose, onCreate }: { onClose: () => void; onCreate: (t: string, d: string, c: string, img: string) => void }) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [cat, setCat] = useState('');
+  const [cover, setCover] = useState('');
   return (
     <>
       <div className="fixed inset-0 z-[110]" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose} />
@@ -730,8 +727,9 @@ function CreateGalleryModal({ onClose, onCreate }: { onClose: () => void; onCrea
             <input type="text" placeholder="عنوان گالری" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2.5 text-sm rounded border" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
             <textarea placeholder="توضیحات" value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
             <input type="text" placeholder="دسته‌بندی" value={cat} onChange={(e) => setCat(e.target.value)} className="w-full px-4 py-2.5 text-sm rounded border" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
+            <ImageUpload label="تصویر کاور" value={cover} onChange={setCover} aspect="aspect-video" />
             <div className="flex gap-3">
-              <button onClick={() => onCreate(title, desc, cat)} disabled={!title} className="flex-1 py-2.5 text-sm rounded font-medium disabled:opacity-30" style={{ background: '#BFA36A', color: '#0a0a0a' }}>ایجاد</button>
+              <button onClick={() => onCreate(title, desc, cat, cover)} disabled={!title} className="flex-1 py-2.5 text-sm rounded font-medium disabled:opacity-30" style={{ background: '#BFA36A', color: '#0a0a0a' }}>ایجاد</button>
               <button onClick={onClose} className="px-4 py-2.5 text-sm rounded border border-white/10 text-gray-400 hover:text-white">انصراف</button>
             </div>
           </div>
@@ -863,6 +861,7 @@ function PostEditor({ post, onClose, onSave }: { post: Post | null; onClose: () 
   const [category, setCategory] = useState(post?.category || '');
   const [tags, setTags] = useState((post?.tags || []).join(', '));
   const [status, setStatus] = useState(post?.status || 'draft');
+  const [featuredImage, setFeaturedImage] = useState(post?.featured_image || '');
 
   return (
     <>
@@ -880,6 +879,7 @@ function PostEditor({ post, onClose, onSave }: { post: Post | null; onClose: () 
               <input type="text" placeholder="دسته‌بندی" value={category} onChange={(e) => setCategory(e.target.value)} className="px-4 py-2.5 text-sm rounded border" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
             </div>
             <textarea placeholder="خلاصه مطلب (SEO)" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={2} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
+            <ImageUpload label="تصویر شاخص" value={featuredImage} onChange={setFeaturedImage} aspect="aspect-video" />
             <textarea placeholder="محتوای مطلب..." value={content} onChange={(e) => setContent(e.target.value)} rows={10} className="w-full px-4 py-2.5 text-sm rounded border resize-none" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
             <div className="grid grid-cols-2 gap-4">
               <input type="text" placeholder="برچسب‌ها (با کاما جدا کنید)" value={tags} onChange={(e) => setTags(e.target.value)} className="px-4 py-2.5 text-sm rounded border" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
@@ -890,7 +890,7 @@ function PostEditor({ post, onClose, onSave }: { post: Post | null; onClose: () 
               </select>
             </div>
             <div className="flex gap-3 pt-2">
-              <button onClick={() => onSave({ title, slug, content, excerpt, category, tags: tags.split(',').map(t => t.trim()).filter(Boolean), status })} disabled={!title} className="flex-1 py-2.5 text-sm rounded font-medium disabled:opacity-30" style={{ background: '#BFA36A', color: '#0a0a0a' }}>ذخیره</button>
+              <button onClick={() => onSave({ title, slug, content, excerpt, category, tags: tags.split(',').map(t => t.trim()).filter(Boolean), status, featured_image: featuredImage })} disabled={!title} className="flex-1 py-2.5 text-sm rounded font-medium disabled:opacity-30" style={{ background: '#BFA36A', color: '#0a0a0a' }}>ذخیره</button>
               <button onClick={onClose} className="px-4 py-2.5 text-sm rounded border border-white/10 text-gray-400 hover:text-white">انصراف</button>
             </div>
           </div>
@@ -1072,6 +1072,114 @@ function SettingField({ label, value, onChange }: { label: string; value: string
     <div>
       <label className="text-xs text-gray-400 block mb-1.5">{label}</label>
       <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-4 py-2.5 text-sm rounded border" style={{ background: '#1a1a1a', borderColor: '#333', color: '#e5e5e5' }} />
+    </div>
+  );
+}
+
+// ============ Notifications Bell ============
+function NotificationsBell() {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  interface AdminNotification {
+    id: string;
+    type: string;
+    title: string;
+    message: string | null;
+    is_read: boolean;
+    link: string | null;
+    created_at: string;
+  }
+
+  const fetchNotifs = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('admin_notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setNotifications((data as AdminNotification[]) || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
+
+  const unread = notifications.filter((n) => !n.is_read).length;
+
+  const markAllRead = async () => {
+    await supabase.from('admin_notifications').update({ is_read: true }).eq('is_read', false);
+    fetchNotifs();
+  };
+
+  const markRead = async (id: string) => {
+    await supabase.from('admin_notifications').update({ is_read: true }).eq('id', id);
+    fetchNotifs();
+  };
+
+  const typeIcon = (type: string) => {
+    switch (type) {
+      case 'order': return <ShoppingBag size={14} style={{ color: '#BFA36A' }} />;
+      case 'user': return <Users size={14} style={{ color: '#3b82f6' }} />;
+      default: return <Bell size={14} style={{ color: '#9ca3af' }} />;
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => { setOpen(!open); if (!open && unread > 0) setTimeout(fetchNotifs, 100); }}
+        className="text-gray-400 hover:text-white transition-colors relative"
+        aria-label="اعلان‌ها"
+      >
+        <Bell size={20} />
+        {unread > 0 && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[105]" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 mt-2 w-80 rounded-lg border border-white/10 shadow-xl z-[106] overflow-hidden" style={{ background: '#161616' }} dir="rtl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <span className="text-sm font-semibold text-white">اعلان‌ها</span>
+              {unread > 0 && (
+                <button onClick={markAllRead} className="text-xs text-gray-400 hover:text-white transition-colors">
+                  علامت‌گذاری همه به‌عنوان خوانده شده
+                </button>
+              )}
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {loading ? (
+                <div className="p-6 text-center"><div className="w-6 h-6 border-2 border-white/10 rounded-full animate-spin mx-auto" style={{ borderTopColor: '#BFA36A' }} /></div>
+              ) : notifications.length === 0 ? (
+                <p className="text-center text-gray-500 text-sm py-8">اعلانی وجود ندارد</p>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => markRead(n.id)}
+                    className="w-full flex items-start gap-3 px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors text-right"
+                    style={{ background: n.is_read ? 'transparent' : 'rgba(191,163,106,0.05)' }}
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                      {typeIcon(n.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-200 font-medium">{n.title}</p>
+                      {n.message && <p className="text-xs text-gray-500 mt-0.5 truncate">{n.message}</p>}
+                      <p className="text-[10px] text-gray-600 mt-1">{new Date(n.created_at).toLocaleString('fa-IR')}</p>
+                    </div>
+                    {!n.is_read && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-2" />}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
